@@ -67,8 +67,8 @@ class BaseRESTAPITestCase(APITestCase):
         """Generates the user instance if needed and the main object if required."""
         self.get_user_factory()
 
-        # Avoid creating 2 objects if testing create.
-        # ```CreateAPITestCaseMixin.get_create_response()```
+        # Avoid creating 2 objects if testing create. Use
+        #  ```CreateAPITestCaseMixin.get_create_response()``` instead for ```test_create```
         if self._testMethodName != 'test_create':
             self.object = self.get_object(self.get_factory_class())
 

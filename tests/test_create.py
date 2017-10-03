@@ -10,6 +10,7 @@ class TestCreateTestCase(TestCase):
         class MockCreateTestCase(CreateAPITestCaseMixin, mocks.MockTestCase):
             base_name = kwargs.pop('base_name', 'stuff')
             factory_class = mocks.StuffFactory
+            model_class = Stuff
             create_data = {"name": "moar stuff"}
 
         self.case_class = MockCreateTestCase
@@ -17,24 +18,24 @@ class TestCreateTestCase(TestCase):
         return MockCreateTestCase(**kwargs)
 
     def test_get_create_url(self):
-        instance = self.get_case(methodName='dummy')
+        instance = self.get_case(methodName='test_create')
         assert instance.get_create_url() == '/stuff/'
 
     def test_get_create_data(self):
-        instance = self.get_case(methodName='dummy')
+        instance = self.get_case(methodName='test_create')
         assert instance.get_create_data() is self.case_class.create_data
 
     def test_get_create_response(self):
-        instance = self.get_case(methodName='dummy')
+        instance = self.get_case(methodName='test_create')
         assert instance.get_create_response()
 
     def test_get_lookup_from_response(self):
-        instance = self.get_case(methodName='dummy')
+        instance = self.get_case(methodName='test_create')
         response = instance.get_create_response()
         assert instance.get_lookup_from_response(response.data)
 
     def test_test_create(self):
-        instance = self.get_case(methodName='dummy')
+        instance = self.get_case(methodName='test_create')
         instance.setUp()
         response, created = instance.test_create()
         assert response
@@ -52,7 +53,7 @@ class TestCreateTestCase(TestCase):
         assert response.data['name'] == created.name
 
     def test_test_create_with_hyperlinkedmodelserializer(self):
-        instance = self.get_case(methodName='dummy', base_name='stuff-linked')
+        instance = self.get_case(methodName='test_create', base_name='stuff-linked')
         instance.setUp()
         instance.response_lookup_field = 'name'
         instance.lookup_field = 'name'
@@ -62,3 +63,13 @@ class TestCreateTestCase(TestCase):
         assert isinstance(created, Stuff)
         assert response.data['name'] == created.name
         assert response.data['url']
+
+    def test_create_only_creates_one_object(self):
+        instance = self.get_case(methodName='test_create')
+        instance.setUp()
+        response, created = instance.test_create({'name': 'this is unique'})
+        assert response
+        assert created
+        assert isinstance(created, Stuff)
+        assert not instance.object
+        assert created.id is not None

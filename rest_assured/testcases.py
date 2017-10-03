@@ -50,28 +50,31 @@ class BaseRESTAPITestCase(APITestCase):
 
         return factory.create()
 
-    def setUp(self):
-        """Generates the main object and user instance if needed.
+    def get_user_factory(self):
+        """Generates the user instance if needed.
 
         The user instance will be created only if the ``user_factory`` attribute is set to the factory class.
 
         If there is an available user instance, that user will be force authenticated.
         """
-
         # create and force authenticate user
         user_factory = getattr(self, 'user_factory')
         if user_factory:
             self.user = user_factory.create()
             self.client.force_authenticate(self.user)
 
-        # create the object
-        self.object = self.get_object(self.get_factory_class())
+    def setUp(self):
+        """Generates the user instance if needed and the main object if required."""
+        self.get_user_factory()
+
+        # Avoid creating 2 objects if testing create.
+        # ```CreateAPITestCaseMixin.get_create_response()```
+        if self._testMethodName != 'test_create':
+            self.object = self.get_object(self.get_factory_class())
 
 
 class ListAPITestCaseMixin(object):
-
     """Adds a list view test to the test case."""
-
     #: When using pagination set this attribute to the name of the property in the response data that holds the result set. Defaults to ``None``.
     pagination_results_field = None
 
@@ -213,6 +216,8 @@ class CreateAPITestCaseMixin(object):
 
     #: *required*: Dictionary of data to use as the POST request's body.
     create_data = None
+    #: Django model under test
+    model_class = None
     #: The name of the field in the response data for looking up the created object in DB.
     response_lookup_field = 'id'
 
@@ -257,6 +262,9 @@ class CreateAPITestCaseMixin(object):
         """
         return data.get(self.response_lookup_field)
 
+    def get_model(self):
+        return self.model_class or self.object.__class__
+
     def test_create(self, data=None, **kwargs):
         """Send request to the create view endpoint, verify and return the response.
 
@@ -273,7 +281,7 @@ class CreateAPITestCaseMixin(object):
 
         # another sanity check:
         # getting the instance from database simply to see that it's found and does not raise any exception
-        created = self.object.__class__.objects.get(
+        created = self.get_model().objects.get(
             **{self.lookup_field: self.get_lookup_from_response(response.data)})
 
         return response, created
@@ -288,7 +296,6 @@ class CreateAPITestCaseMixin(object):
 
 
 class DestroyAPITestCaseMixin(object):
-
     """Adds a destroy view test to the test case."""
 
     def get_destroy_url(self):
@@ -490,11 +497,11 @@ class ReadRESTAPITestCaseMixin(ListAPITestCaseMixin, DetailAPITestCaseMixin):
     pass
 
 
-class WriteRESTAPITestCaseMixin(CreateAPITestCaseMixin, UpdateAPITestCaseMixin, DestroyAPITestCaseMixin):
+class WriteRESTAPITestCaseMixin(UpdateAPITestCaseMixin, DestroyAPITestCaseMixin, CreateAPITestCaseMixin):
 
     """Adds the write CRUD operations tests to the test case.
 
-    Includes: :class:`CreateAPITestCaseMixin`, :class:`UpdateAPITestCaseMixin`, :class:`DestroyAPITestCaseMixin`.
+    Includes: :class:`UpdateAPITestCaseMixin`, :class:`DestroyAPITestCaseMixin`, :class:`CreateAPITestCaseMixin`.
     """
 
     pass

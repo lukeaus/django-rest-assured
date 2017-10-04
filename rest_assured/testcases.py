@@ -263,7 +263,7 @@ class CreateAPITestCaseMixin(object):
         return data.get(self.response_lookup_field)
 
     def get_model(self):
-        return self.model_class or self.object.__class__
+        return self.model_class if hasattr(self, 'model_class') else self.object.__class__
 
     def test_create(self, data=None, **kwargs):
         """Send request to the create view endpoint, verify and return the response.
